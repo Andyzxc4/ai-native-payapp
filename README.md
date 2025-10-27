@@ -1,280 +1,379 @@
-# PayApp - Payment Web Application
+# PayApp - Modern Payment Web Application 💸
 
-A modern payment web application inspired by GCash, built with Node.js, Express, SQLite, and featuring real-time audio confirmation using Text-to-Speech technology.
+A modern Philippine Peso payment web application inspired by GCash, built with Node.js, Express, SQLite, and featuring QR code payments, AI chatbot assistant, and real-time audio confirmation using Text-to-Speech technology.
 
-## 🚀 Features
+[![Node.js](https://img.shields.io/badge/Node.js-v14+-green.svg)](https://nodejs.org/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Currency](https://img.shields.io/badge/Currency-PHP_(₱)-orange.svg)](https://en.wikipedia.org/wiki/Philippine_peso)
 
-- **User Authentication**: Secure login with express-session for persistent sessions
-- **Payment Processing**: Send money between users with real-time balance updates
-- **Transaction History**: View all sent and received transactions
-- **Audio Confirmation**: TTS audio feedback for all transactions (success/failure)
-- **Real-time Updates**: Server-Sent Events for live transaction updates
-- **Responsive Design**: Beautiful UI built with Tailwind CSS
-- **Lightweight Interactivity**: Alpine.js for minimal, efficient client-side logic
-- **SQLite Database**: Simple, file-based database for users and transactions
+---
 
-## 🛠️ Tech Stack
+## 🚀 **Quick Start**
+
+```bash
+# 1. Install dependencies
+npm install
+
+# 2. Initialize database
+npm run init-db
+
+# 3. Start server
+npm start
+
+# 4. Open browser
+# Visit: http://localhost:3000
+```
+
+**That's it! You're ready to go!** 🎉
+
+📚 **Need help?** Check out [Quick Start Guide](docs/QUICK_START.md) or [Server Management Guide](docs/SERVER_MANAGEMENT_GUIDE.md)
+
+---
+
+## ✨ **Key Features**
+
+### 💳 **Payment Features**
+- ✅ Send and receive money instantly
+- ✅ Real-time balance updates
+- ✅ Transaction history tracking
+- ✅ QR code payments (generate & scan)
+- ✅ Auto-complete recipient search
+- ✅ Daily spending statistics
+
+### 🤖 **AI Chatbot Assistant**
+- ✅ Context-aware help system
+- ✅ Real-time balance inquiries
+- ✅ Transaction history access
+- ✅ Voice input/output support
+- ✅ Smart feature guidance
+
+### 🔐 **Security**
+- ✅ Secure authentication
+- ✅ Password hashing (bcrypt)
+- ✅ Session management
+- ✅ Balance verification
+- ✅ Transaction validation
+
+### 🎨 **Modern UI/UX**
+- ✅ Beautiful responsive design
+- ✅ Smooth animations
+- ✅ Audio confirmations (TTS)
+- ✅ Mobile-friendly interface
+- ✅ Philippine Peso (₱) branding
+
+---
+
+## 🎯 **What's New**
+
+**Latest Updates:**
+- 🆕 **QR Code Payments** - Generate QR to receive, scan QR to pay
+- 🆕 **AI Helpdesk Chatbot** - Smart assistant with voice support
+- 🆕 **Enhanced Statistics** - Track daily spending and total received
+- 🆕 **Philippine Peso Branding** - Full ₱ symbol integration
+- 🆕 **Mobile Camera Support** - QR scanning with camera or image upload
+
+See [Feature Summary](docs/FEATURE_SUMMARY.md) for complete details.
+
+---
+
+## 👥 **Sample Users**
+
+Two pre-configured test accounts are available:
+
+| Name | Email | Password | Initial Balance |
+|------|-------|----------|-----------------|
+| **Andres Lacra** | andres.lacra@example.com | password123 | ₱10,000 |
+| **Maria Cruz** | maria.cruz@example.com | password123 | ₱10,000 |
+
+---
+
+## 🛠️ **Tech Stack**
 
 ### Frontend
-- **Tailwind CSS**: Modern, utility-first CSS framework
-- **Alpine.js**: Lightweight JavaScript framework for interactivity
-- **Web Speech API**: Browser-based Text-to-Speech for audio confirmations
+- **Tailwind CSS** - Modern utility-first styling
+- **Alpine.js** - Lightweight reactive framework
+- **Web Speech API** - Voice recognition & TTS
+- **HTML5-QRCode** - QR code scanning
 
 ### Backend
-- **Node.js**: JavaScript runtime
-- **Express.js**: Web application framework
-- **SQLite (better-sqlite3)**: Embedded database
-- **bcrypt**: Password hashing
-- **express-session**: Session management
+- **Node.js** - JavaScript runtime
+- **Express.js** - Web framework
+- **SQLite** - Embedded database
+- **bcrypt** - Password security
+- **QRCode** - QR generation
 
-## 📋 Prerequisites
+---
 
-- Node.js (v14 or higher)
-- npm (Node Package Manager)
+## 📖 **Documentation**
 
-## 🔧 Installation
+All documentation is organized in the [`docs/`](docs/) folder:
 
-1. **Navigate to the project directory:**
-   ```bash
-   cd /Users/andre-d.lacra/ai-native-projects/payment-app-1
-   ```
+### **🚀 Getting Started**
+- [Quick Start Guide](docs/QUICK_START.md) - Get up and running
+- [Server Management](docs/SERVER_MANAGEMENT_GUIDE.md) - Start/stop server
+- [Quick Commands](docs/QUICK_COMMANDS.md) - Command reference
+- [Kill Commands Explained](docs/KILL_COMMANDS_EXPLAINED.md) - Stop server methods
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+### **💡 Feature Guides**
+- [QR Payment Feature](docs/QR_PAYMENT_FEATURE.md) - Complete QR guide
+- [QR Quick Start](docs/QR_QUICK_START.md) - Fast QR setup
+- [Helpdesk Guide](docs/HELPDESK_GUIDE.md) - Chatbot usage
+- [Enhanced Chatbot](docs/ENHANCED_CHATBOT_GUIDE.md) - AI features
 
-3. **Initialize the database:**
-   ```bash
-   npm run init-db
-   ```
-   This will create the SQLite database and populate it with two sample users.
+### **🔧 Technical Documentation**
+- [Project Structure](docs/PROJECT_STRUCTURE.md) - Architecture overview
+- [Feature Summary](docs/FEATURE_SUMMARY.md) - All features list
+- [Summary](docs/SUMMARY.md) - Project summary
 
-4. **Start the server:**
-   ```bash
-   npm start
-   ```
-   For development with auto-reload:
-   ```bash
-   npm run dev
-   ```
+### **🐛 Troubleshooting**
+- [Camera Permissions](docs/CAMERA_PERMISSION_GUIDE.md) - Fix camera issues
+- [Samsung Android Guide](docs/SAMSUNG_ANDROID_GUIDE.md) - Samsung-specific
+- [Final Fixes](docs/FINAL_FIXES_SUMMARY.md) - Recent bug fixes
+- [UI Alignment Fixes](docs/UI_ALIGNMENT_FIXES.md) - Layout fixes
 
-5. **Open your browser:**
-   Navigate to `http://localhost:3000`
+📚 **[View All Documentation →](docs/README.md)**
 
-## 👥 Sample Users
+---
 
-The application comes with two pre-configured test users:
-
-### User 1
-- **Name**: Andres Lacra
-- **Email**: andres.lacra@example.com
-- **Password**: password123
-- **Initial Balance**: 10,000 PHP
-
-### User 2
-- **Name**: Maria Cruz
-- **Email**: maria.cruz@example.com
-- **Password**: password123
-- **Initial Balance**: 10,000 PHP
-
-## 📱 Usage
-
-### Login
-1. Navigate to `http://localhost:3000`
-2. Enter one of the sample user credentials
-3. Click "Sign In"
-4. You'll hear an audio confirmation and be redirected to the dashboard
-
-### Send Payment
-1. On the dashboard, find the "Send Money" form
-2. Start typing a recipient's email - autocomplete suggestions will appear
-3. Select a recipient or enter their email manually
-4. Enter the amount to send
-5. Click "Send Payment"
-6. You'll hear an audio confirmation of the transaction
-7. Your balance and transaction history will update automatically
-
-### View Transaction History
-- All transactions appear in the "Recent Transactions" panel
-- Sent payments are shown in red (with minus sign)
-- Received payments are shown in green (with plus sign)
-- Timestamps show relative time (e.g., "5m ago", "2h ago")
-
-## 🗂️ Project Structure
+## 🗂️ **Project Structure**
 
 ```
-payment-app-1/
-├── server.js              # Main Express server
-├── database.js            # Database queries and connections
-├── init-db.js            # Database initialization script
-├── package.json          # Project dependencies
-├── .env                  # Environment variables
-├── .gitignore           # Git ignore rules
-├── README.md            # This file
-└── public/              # Frontend files
-    ├── login.html       # Login page
-    ├── dashboard.html   # Main dashboard
-    └── js/
-        ├── login.js     # Login page logic
-        └── dashboard.js # Dashboard logic
+ai-native-payapp/
+├── 📁 docs/                    # All documentation
+│   ├── README.md              # Documentation index
+│   ├── QUICK_START.md         # Quick setup guide
+│   ├── SERVER_MANAGEMENT_GUIDE.md
+│   └── ... (15+ guides)
+│
+├── 📁 public/                 # Frontend files
+│   ├── dashboard.html         # Main dashboard
+│   ├── login.html             # Login page
+│   └── js/
+│       ├── dashboard.js       # Dashboard logic
+│       └── login.js           # Login logic
+│
+├── server.js                  # Express server
+├── database.js                # Database layer
+├── init-db.js                 # DB initialization
+├── package.json               # Dependencies
+├── payment.db                 # SQLite database
+└── README.md                  # This file
 ```
 
-## 🔌 API Endpoints
+---
+
+## 🚦 **Available Commands**
+
+### **Start/Stop Server**
+```bash
+# Start server
+npm start
+
+# Stop server (in terminal)
+Ctrl + C
+
+# Force stop
+pkill -f "node server.js"
+# OR
+lsof -ti:3000 | xargs kill -9
+```
+
+### **Database**
+```bash
+# Initialize/Reset database
+npm run init-db
+
+# Backup database
+cp payment.db payment.db.backup
+```
+
+### **Access**
+- **Local:** http://localhost:3000
+- **Network:** http://192.168.86.6:3000 (for mobile testing)
+
+📚 **More commands:** [Quick Commands Guide](docs/QUICK_COMMANDS.md)
+
+---
+
+## 🎮 **How to Use**
+
+### **1. Login**
+- Visit http://localhost:3000
+- Use sample credentials above
+- Hear "Welcome back" confirmation
+
+### **2. Send Money**
+- Enter recipient email (auto-complete available)
+- Enter amount
+- Click "Send Payment"
+- Hear confirmation with new balance
+
+### **3. Receive Money (QR Code)**
+- Click "QR Code" tab
+- Select "Receive Money"
+- Show QR code to payer
+- They scan and send payment
+
+### **4. Pay with QR Code**
+- Click "QR Code" tab
+- Select "Scan QR Code"
+- Scan recipient's QR code
+- Enter amount and send
+
+### **5. Chat with Assistant**
+- Click "Helpdesk" tab
+- Ask questions about your account
+- Try "What's my balance?" or "Show my transactions"
+- Use voice input button for hands-free
+
+---
+
+## 🔌 **API Endpoints**
 
 ### Authentication
 - `POST /api/login` - User login
 - `POST /api/logout` - User logout
-- `GET /api/session` - Check current session
+- `GET /api/session` - Check session
 
-### User Management
-- `GET /api/profile` - Get current user profile
-- `GET /api/users` - Get all users (for recipient search)
+### User & Payments
+- `GET /api/profile` - Current user
+- `GET /api/users` - All users (search)
+- `POST /api/send-payment` - Send money
+- `GET /api/transactions` - Transaction history
 
-### Payments
-- `POST /api/send-payment` - Send money to another user
-  - Body: `{ receiverEmail, amount }`
-- `GET /api/transactions` - Get transaction history
+### QR Code
+- `GET /api/generate-payment-qr` - Generate QR for receiving
+- `POST /api/decode-payment-qr` - Decode scanned QR
 
-### Real-time Updates
-- `GET /api/events` - Server-Sent Events endpoint for real-time updates
+### Real-time
+- `GET /api/events` - Server-Sent Events (SSE)
 
-## 🔒 Security Features
+---
 
-- **Password Hashing**: bcrypt with salt rounds for secure password storage
-- **Session Management**: express-session with secure cookies
-- **Input Validation**: Server-side validation for all transactions
-- **Balance Verification**: Checks sufficient funds before processing payments
-- **User Verification**: Validates sender and receiver exist
-- **Transaction Integrity**: Database transactions ensure atomicity
+## 🎨 **UI Highlights**
 
-## 🎵 Audio Confirmation (TTS)
+- **Philippine Peso (₱) Branding** - Authentic local currency display
+- **Tab Navigation** - Send Money, QR Code, Helpdesk, History
+- **Quick Info Dashboard** - Today's sent, total received, transaction count
+- **Audio Feedback** - Voice confirmations for all actions
+- **Responsive Design** - Works on desktop and mobile
+- **Modern Gradients** - Beautiful blue/indigo color scheme
+- **Smooth Animations** - Slide-in effects and transitions
 
-The application uses the browser's built-in Web Speech API for audio feedback:
+---
 
-- **Login**: "Welcome back, [Name]. Login successful."
-- **Successful Payment**: "Payment successful. You sent [amount] pesos to [recipient]. Your new balance is [balance] pesos."
-- **Failed Payment**: "Payment failed. [error message]"
-- **Logout**: "Logged out successfully. Goodbye!"
+## 🐛 **Troubleshooting**
 
-## 🔄 Real-time Updates
-
-The application uses Server-Sent Events (SSE) for real-time communication:
-- Automatic balance updates when receiving payments
-- Live transaction history updates
-- Connection kept alive with periodic ping messages
-- Automatic reconnection on connection loss
-
-## 🛡️ Error Handling
-
-The application handles various error scenarios:
-- Insufficient balance
-- User not found
-- Invalid credentials
-- Sending to self
-- Network errors
-- Session expiration
-
-## 🚦 Development Scripts
-
+### **Server won't start (port in use)**
 ```bash
-# Install dependencies
-npm install
-
-# Initialize database
-npm run init-db
-
-# Start production server
+lsof -ti:3000 | xargs kill -9
 npm start
-
-# Start development server with auto-reload
-npm run dev
 ```
 
-## 🎨 UI Features
+### **Camera not working on mobile**
+- Check browser permissions
+- Try "Upload QR Code Image" instead
+- See [Camera Permission Guide](docs/CAMERA_PERMISSION_GUIDE.md)
 
-- **Gradient backgrounds** for modern look
-- **Smooth animations** and transitions
-- **Responsive design** works on all screen sizes
-- **Loading states** for better UX
-- **Auto-complete** for recipient selection
-- **Real-time balance** display
-- **Transaction categorization** (sent/received)
-- **Relative timestamps** for transactions
+### **Stats showing zero**
+- Make sure transactions exist
+- Refresh page
+- See [Final Fixes Summary](docs/FINAL_FIXES_SUMMARY.md)
 
-## 📝 Database Schema
-
-### Users Table
-```sql
-CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  phone TEXT UNIQUE NOT NULL,
-  email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  balance REAL NOT NULL DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-)
-```
-
-### Transactions Table
-```sql
-CREATE TABLE transactions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  sender_id INTEGER NOT NULL,
-  receiver_id INTEGER NOT NULL,
-  amount REAL NOT NULL,
-  status TEXT NOT NULL,
-  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (sender_id) REFERENCES users(id),
-  FOREIGN KEY (receiver_id) REFERENCES users(id)
-)
-```
-
-## 🐛 Troubleshooting
-
-### Database Issues
-If you encounter database errors:
+### **Database issues**
 ```bash
-# Remove the database and reinitialize
 rm payment.db
 npm run init-db
 ```
 
-### Port Already in Use
-If port 3000 is already in use, modify the `.env` file:
-```env
-PORT=3001
-```
-
-### Audio Not Working
-- Ensure your browser supports Web Speech API (Chrome, Edge, Safari)
-- Check browser permissions for audio
-- Verify volume is not muted
-
-## 🔮 Future Enhancements
-
-Potential features to add:
-- User registration
-- Password reset functionality
-- Transaction receipts
-- QR code payments
-- Multi-currency support
-- Transaction search and filters
-- Email notifications
-- Two-factor authentication
-- Payment requests
-- Scheduled payments
-
-## 📄 License
-
-MIT License - Feel free to use this project for learning and development purposes.
-
-## 👨‍💻 Author
-
-Built with ❤️ for learning and demonstration purposes.
+📖 **More help:** Check the [docs/](docs/) folder for detailed guides!
 
 ---
 
-**Note**: This is a demonstration application. For production use, implement additional security measures, use environment-specific configurations, and consider using a more robust database solution.
+## 🔮 **Implemented Features**
+
+✅ User authentication  
+✅ Send/receive payments  
+✅ Transaction history  
+✅ QR code payments (generate & scan)  
+✅ AI chatbot assistant  
+✅ Voice input/output  
+✅ Real-time updates (SSE)  
+✅ Audio confirmations (TTS)  
+✅ Mobile-friendly UI  
+✅ Philippine Peso support  
+✅ Daily statistics  
+✅ Camera/image QR scanning  
+
+---
+
+## 💡 **Tips**
+
+- 🎯 **Start here:** [Quick Start Guide](docs/QUICK_START.md)
+- 🔧 **Daily reference:** [Quick Commands](docs/QUICK_COMMANDS.md)
+- 📱 **Mobile testing:** Use network IP on same WiFi
+- 🤖 **Try chatbot:** Ask "What's my balance?"
+- 📊 **Check stats:** Quick Info shows spending summary
+
+---
+
+## 📚 **Learning Resources**
+
+- [Complete Documentation](docs/README.md) - All guides indexed
+- [Project Structure](docs/PROJECT_STRUCTURE.md) - Understand architecture
+- [Feature Summary](docs/FEATURE_SUMMARY.md) - Complete feature list
+- [Server Management](docs/SERVER_MANAGEMENT_GUIDE.md) - Development workflow
+
+---
+
+## 🎓 **For Beginners**
+
+New to Node.js or npm? Start here:
+
+1. **Day 1:** [Quick Start Guide](docs/QUICK_START.md)
+2. **Day 2:** [Server Management](docs/SERVER_MANAGEMENT_GUIDE.md)
+3. **Week 1:** [Feature Guides](docs/README.md#-feature-guides)
+4. **Week 2:** [Technical Docs](docs/README.md#-technical-guides)
+
+**All guides are beginner-friendly with step-by-step instructions!** 📖
+
+---
+
+## 📄 **License**
+
+MIT License - Free to use for learning and development.
+
+---
+
+## 👨‍💻 **Development**
+
+Built with ❤️ using modern web technologies for learning and demonstration.
+
+**Key Technologies:**
+- Node.js & Express.js
+- SQLite & better-sqlite3
+- Tailwind CSS & Alpine.js
+- Web Speech API
+- QRCode generation
+- Server-Sent Events
+
+---
+
+## 🎉 **Ready to Start?**
+
+```bash
+npm install && npm run init-db && npm start
+```
+
+Then visit: **http://localhost:3000**
+
+**Need help?** → [Documentation](docs/README.md) | [Quick Start](docs/QUICK_START.md) | [Quick Commands](docs/QUICK_COMMANDS.md)
+
+---
+
+**⚠️ Note:** This is a demonstration/learning application. For production use, implement additional security measures, use environment-specific configurations, and consider using a more robust database solution.
+
+---
+
+**Happy Coding! 🚀**
 
