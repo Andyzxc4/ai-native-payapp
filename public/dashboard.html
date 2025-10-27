@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayApp - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .slide-in {
+      animation: slideIn 0.3s ease-out;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen" x-data="dashboardApp()" x-init="init()">
+  
+  <!-- Header/Navigation -->
+  <nav class="bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center">
+          <svg class="w-8 h-8 text-white mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <h1 class="text-white text-xl font-bold">PayApp</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+          <span class="text-white text-sm" x-text="user.name"></span>
+          <button @click="logout" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition">
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- Balance Card -->
+    <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl shadow-xl p-8 mb-8 text-white slide-in">
+      <p class="text-blue-100 text-sm mb-2">Available Balance</p>
+      <h2 class="text-5xl font-bold mb-4" x-text="'₱' + formatMoney(user.balance)"></h2>
+      <div class="flex items-center text-sm">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+        </svg>
+        <span x-text="user.email"></span>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div x-show="alert.show" x-transition class="mb-6 rounded-lg shadow-lg p-4" 
+         :class="alert.type === 'success' ? 'bg-green-50 border-l-4 border-green-500 text-green-800' : 'bg-red-50 border-l-4 border-red-500 text-red-800'">
+      <p class="font-medium" x-text="alert.message"></p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      <!-- Send Payment Form -->
+      <div class="bg-white rounded-xl shadow-lg p-6 slide-in">
+        <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+          <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Send Money
+        </h3>
+
+        <form @submit.prevent="sendPayment">
+          <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-semibold mb-2">Recipient</label>
+            <div class="relative">
+              <input 
+                type="email" 
+                x-model="payment.receiverEmail"
+                @input="searchUsers"
+                @focus="showSuggestions = true"
+                required
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                placeholder="recipient@email.com"
+              >
+              
+              <!-- User suggestions dropdown -->
+              <div x-show="showSuggestions && filteredUsers.length > 0" 
+                   @click.away="showSuggestions = false"
+                   class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                <template x-for="suggestedUser in filteredUsers" :key="suggestedUser.id">
+                  <button 
+                    type="button"
+                    @click="selectUser(suggestedUser)"
+                    class="w-full text-left px-4 py-3 hover:bg-blue-50 transition border-b border-gray-100 last:border-b-0">
+                    <p class="font-semibold text-gray-800" x-text="suggestedUser.name"></p>
+                    <p class="text-sm text-gray-600" x-text="suggestedUser.email"></p>
+                  </button>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-6">
+            <label class="block text-gray-700 text-sm font-semibold mb-2">Amount (₱)</label>
+            <input 
+              type="number" 
+              x-model="payment.amount"
+              step="0.01"
+              min="1"
+              required
+              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              placeholder="0.00"
+            >
+          </div>
+
+          <button 
+            type="submit"
+            :disabled="payment.loading"
+            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
+            <span x-show="!payment.loading">Send Payment</span>
+            <span x-show="payment.loading" class="flex items-center justify-center">
+              <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            </span>
+          </button>
+        </form>
+      </div>
+
+      <!-- Transaction History -->
+      <div class="bg-white rounded-xl shadow-lg p-6 slide-in">
+        <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center justify-between">
+          <span class="flex items-center">
+            <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            Recent Transactions
+          </span>
+          <button @click="loadTransactions" class="text-sm text-blue-600 hover:text-blue-700">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+          </button>
+        </h3>
+
+        <div class="space-y-3 max-h-96 overflow-y-auto">
+          <template x-if="transactions.length === 0">
+            <div class="text-center py-8 text-gray-500">
+              <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+              </svg>
+              <p>No transactions yet</p>
+            </div>
+          </template>
+
+          <template x-for="transaction in transactions" :key="transaction.id">
+            <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex-1">
+                  <p class="font-semibold text-gray-800" 
+                     :class="transaction.type === 'sent' ? 'text-red-600' : 'text-green-600'"
+                     x-text="transaction.type === 'sent' ? 'Sent to' : 'Received from'">
+                  </p>
+                  <p class="text-sm text-gray-600" x-text="transaction.otherParty.name"></p>
+                  <p class="text-xs text-gray-500" x-text="transaction.otherParty.email"></p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold text-lg" 
+                     :class="transaction.type === 'sent' ? 'text-red-600' : 'text-green-600'"
+                     x-text="(transaction.type === 'sent' ? '-' : '+') + '₱' + formatMoney(transaction.amount)">
+                  </p>
+                  <p class="text-xs text-gray-500" x-text="formatDate(transaction.timestamp)"></p>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>
+
