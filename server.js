@@ -4,6 +4,8 @@ const session = require('express-session');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcrypt');
 const path = require('path');
+const QRCode = require('qrcode');
+const os = require('os');
 const {
   db,
   dbRun,
@@ -17,6 +19,20 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Helper function to get local network IP
+function getLocalNetworkIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      // Skip internal (loopback) and non-IPv4 addresses
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost'; // fallback
+}
 
 // Middleware
 app.use(bodyParser.json());
@@ -264,6 +280,124 @@ app.get('/api/transactions', isAuthenticated, async (req, res) => {
   }
 });
 
+// Generate QR Code for receiving payments
+app.get('/api/generate-payment-qr', isAuthenticated, async (req, res) => {
+  try {
+    const user = await getUserById(req.session.userId);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Create payment data object
+    const paymentData = {
+      type: 'payment_request',
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      timestamp: Date.now()
+    };
+
+    // Convert to JSON string for QR code
+    const qrData = JSON.stringify(paymentData);
+    
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
+      errorCorrectionLevel: 'H', // High error correction for payment data
+      type: 'image/png',
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#2563eb', // Blue color
+        light: '#ffffff'
+      }
+    });
+
+    res.json({
+      qrCode: qrCodeDataUrl,
+      userData: {
+        name: user.name,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    console.error('Payment QR generation error:', error);
+    res.status(500).json({ error: 'Failed to generate payment QR code' });
+  }
+});
+
+// Decode payment QR code
+app.post('/api/decode-payment-qr', isAuthenticated, async (req, res) => {
+  try {
+    const { qrData } = req.body;
+    
+    if (!qrData) {
+      return res.status(400).json({ error: 'QR data is required' });
+    }
+
+    // Parse the QR data
+    const paymentData = JSON.parse(qrData);
+    
+    // Validate the data structure
+    if (paymentData.type !== 'payment_request' || !paymentData.userId) {
+      return res.status(400).json({ error: 'Invalid payment QR code' });
+    }
+
+    // Get recipient user info
+    const recipient = await getUserById(paymentData.userId);
+    
+    if (!recipient) {
+      return res.status(404).json({ error: 'Recipient not found' });
+    }
+
+    // Check if trying to pay yourself
+    if (recipient.id === req.session.userId) {
+      return res.status(400).json({ error: 'Cannot send payment to yourself' });
+    }
+
+    res.json({
+      recipient: {
+        id: recipient.id,
+        name: recipient.name,
+        email: recipient.email
+      }
+    });
+  } catch (error) {
+    console.error('QR decode error:', error);
+    res.status(400).json({ error: 'Invalid QR code format' });
+  }
+});
+
+// Generate QR Code for app access (original feature)
+app.get('/api/generate-qr', isAuthenticated, async (req, res) => {
+  try {
+    const networkIP = getLocalNetworkIP();
+    const loginUrl = `http://${networkIP}:${PORT}/`;
+    
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(loginUrl, {
+      errorCorrectionLevel: 'M',
+      type: 'image/png',
+      width: 300,
+      margin: 2,
+      color: {
+        dark: '#2563eb', // Blue color
+        light: '#ffffff'
+      }
+    });
+
+    res.json({
+      qrCode: qrCodeDataUrl,
+      url: loginUrl,
+      networkIP: networkIP,
+      port: PORT
+    });
+  } catch (error) {
+    console.error('QR generation error:', error);
+    res.status(500).json({ error: 'Failed to generate QR code' });
+  }
+});
+
 // Server-Sent Events for real-time updates
 app.get('/api/events', isAuthenticated, (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -295,13 +429,17 @@ app.get('/dashboard', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Payment Application running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  const networkIP = getLocalNetworkIP();
+  console.log(`🚀 Payment Application running on:`);
+  console.log(`   - Local:   http://localhost:${PORT}`);
+  console.log(`   - Network: http://${networkIP}:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('\n💡 To get started:');
   console.log('   1. Run: npm run init-db (if not already done)');
   console.log('   2. Visit: http://localhost:3000');
-  console.log('   3. Login with sample credentials\n');
+  console.log('   3. Login with sample credentials');
+  console.log('   4. Use QR code to access from mobile devices on same network\n');
 });
 
 // Graceful shutdown

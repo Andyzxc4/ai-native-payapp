@@ -6,6 +6,7 @@
   <title>PayApp - Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
     @keyframes slideIn {
       from { opacity: 0; transform: translateX(-20px); }
@@ -13,6 +14,10 @@
     }
     .slide-in {
       animation: slideIn 0.3s ease-out;
+    }
+    .tab-active {
+      border-bottom: 3px solid white;
+      font-weight: bold;
     }
   </style>
 </head>
@@ -52,22 +57,61 @@
       </div>
     </div>
 
+    <!-- Tab Navigation -->
+    <div class="bg-white rounded-t-xl shadow-lg mb-0">
+      <div class="flex border-b border-gray-200">
+        <button 
+          @click="activeTab = 'send'"
+          class="flex-1 px-6 py-4 text-center transition-colors duration-200"
+          :class="activeTab === 'send' ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'">
+          <div class="flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Send Money
+          </div>
+        </button>
+        <button 
+          @click="switchToQRTab()"
+          class="flex-1 px-6 py-4 text-center transition-colors duration-200"
+          :class="activeTab === 'qr' ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'">
+          <div class="flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+            </svg>
+            QR Code
+          </div>
+        </button>
+        <button 
+          @click="activeTab = 'history'"
+          class="flex-1 px-6 py-4 text-center transition-colors duration-200"
+          :class="activeTab === 'history' ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'">
+          <div class="flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+            </svg>
+            History
+          </div>
+        </button>
+      </div>
+    </div>
+
     <!-- Alerts -->
     <div x-show="alert.show" x-transition class="mb-6 rounded-lg shadow-lg p-4" 
          :class="alert.type === 'success' ? 'bg-green-50 border-l-4 border-green-500 text-green-800' : 'bg-red-50 border-l-4 border-red-500 text-red-800'">
       <p class="font-medium" x-text="alert.message"></p>
     </div>
 
+    <!-- Tab Content -->
+    <div class="bg-white rounded-b-xl shadow-lg">
+      
+      <!-- Send Money Tab -->
+      <div x-show="activeTab === 'send'" class="p-6 slide-in">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       
       <!-- Send Payment Form -->
-      <div class="bg-white rounded-xl shadow-lg p-6 slide-in">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-          <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          Send Money
-        </h3>
+          <div>
+        <h3 class="text-2xl font-bold text-gray-800 mb-6">Send Money</h3>
 
         <form @submit.prevent="sendPayment">
           <div class="mb-4">
@@ -129,23 +173,49 @@
         </form>
       </div>
 
-      <!-- Transaction History -->
-      <div class="bg-white rounded-xl shadow-lg p-6 slide-in">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6 flex items-center justify-between">
-          <span class="flex items-center">
+      <!-- Quick Stats (on send tab) -->
+      <div>
+        <div class="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
+          <h4 class="text-lg font-semibold text-gray-800 mb-4">Quick Info</h4>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-gray-600">Total Sent Today</span>
+              <span class="font-bold text-red-600" x-text="'₱' + formatMoney(stats.totalSentToday)"></span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-gray-600">Total Received</span>
+              <span class="font-bold text-green-600" x-text="'₱' + formatMoney(stats.totalReceived)"></span>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-indigo-200">
+              <span class="text-gray-600 text-sm">Transaction Count</span>
+              <span class="font-bold text-indigo-600" x-text="stats.transactionCount"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Transaction History Tab -->
+  <div x-show="activeTab === 'history'" class="p-6 slide-in">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-2xl font-bold text-gray-800 flex items-center">
             <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
             </svg>
-            Recent Transactions
-          </span>
-          <button @click="loadTransactions" class="text-sm text-blue-600 hover:text-blue-700">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          Transaction History
+        </h3>
+        <button @click="loadTransactions" class="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+          <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
+          Refresh
           </button>
-        </h3>
+      </div>
 
-        <div class="space-y-3 max-h-96 overflow-y-auto">
+      <div class="space-y-3 max-h-[600px] overflow-y-auto">
           <template x-if="transactions.length === 0">
             <div class="text-center py-8 text-gray-500">
               <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -178,7 +248,277 @@
           </template>
         </div>
       </div>
+    </div>
 
+    <!-- QR Code Tab -->
+    <div x-show="activeTab === 'qr'" class="p-6 slide-in">
+      <div class="max-w-5xl mx-auto">
+        
+        <!-- Toggle between Receive and Scan -->
+        <div class="flex justify-center mb-8">
+          <div class="bg-gray-100 rounded-lg p-1 inline-flex">
+            <button 
+              @click="qrMode = 'receive'"
+              :class="qrMode === 'receive' ? 'bg-white shadow-md' : 'hover:bg-gray-200'"
+              class="px-6 py-2 rounded-md transition font-semibold">
+              Receive Money
+            </button>
+            <button 
+              @click="qrMode = 'scan'"
+              :class="qrMode === 'scan' ? 'bg-white shadow-md' : 'hover:bg-gray-200'"
+              class="px-6 py-2 rounded-md transition font-semibold">
+              Scan QR Code
+            </button>
+          </div>
+        </div>
+
+        <!-- Receive Money Mode -->
+        <div x-show="qrMode === 'receive'" class="text-center">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Your Payment QR Code</h3>
+          <p class="text-gray-600 mb-8">Show this QR code to receive payments from others</p>
+          
+          <div x-show="!paymentQr.loaded" class="flex justify-center items-center py-12">
+            <svg class="animate-spin h-12 w-12 text-blue-600" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+
+          <div x-show="paymentQr.loaded" class="bg-white rounded-2xl shadow-xl p-8 inline-block">
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 mb-6 border-2 border-green-200">
+              <img :src="paymentQr.dataUrl" alt="Payment QR Code" class="mx-auto" style="max-width: 300px;">
+            </div>
+            
+            <div class="text-left space-y-4">
+              <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                <p class="text-sm text-gray-600 mb-2">📱 Your Payment Details:</p>
+                <p class="font-semibold text-lg text-gray-800" x-text="paymentQr.userData.name"></p>
+                <p class="font-mono text-sm text-gray-600" x-text="paymentQr.userData.email"></p>
+              </div>
+
+              <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="flex items-start">
+                  <svg class="w-5 h-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <div class="text-sm text-green-800">
+                    <p class="font-semibold mb-1">How to receive payment:</p>
+                    <ol class="list-decimal list-inside space-y-1 text-green-700">
+                      <li>Show this QR code to the person paying you</li>
+                      <li>They scan it with the app</li>
+                      <li>They enter the amount and send</li>
+                      <li>You receive the payment instantly!</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button 
+            @click="generatePaymentQRCode()" 
+            class="mt-6 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-lg hover:shadow-xl">
+            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Regenerate QR Code
+          </button>
+        </div>
+
+        <!-- Scan QR Code Mode -->
+        <div x-show="qrMode === 'scan'" class="text-center">
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Scan Payment QR Code</h3>
+          <p class="text-gray-600 mb-8">Scan someone's QR code to send them a payment</p>
+
+          <div class="bg-white rounded-2xl shadow-xl p-8 inline-block max-w-2xl">
+            <!-- Scanner Container -->
+            <div id="qr-reader" x-show="scanner.active" class="rounded-lg overflow-hidden mb-4" style="width: 100%; max-width: 500px;"></div>
+            
+            <!-- Start/Stop Scanner Buttons -->
+            <div x-show="!scanner.active" class="mb-4">
+              <button 
+                @click="startScanner()" 
+                class="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition shadow-lg hover:shadow-xl text-lg font-semibold mb-3">
+                <svg class="w-6 h-6 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Start Camera Scanner
+              </button>
+              
+              <!-- Alternative: Upload QR Code Image -->
+              <div class="text-center">
+                <p class="text-sm text-gray-600 mb-2">Or</p>
+                <label class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition cursor-pointer inline-block">
+                  <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                  Upload QR Code Image
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    @change="scanFromImage($event)"
+                    class="hidden">
+                </label>
+              </div>
+            </div>
+
+            <div x-show="scanner.active" class="mb-4">
+              <button 
+                @click="stopScanner()" 
+                class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                Stop Scanner
+              </button>
+            </div>
+
+            <!-- Scanner Status -->
+            <div x-show="scanner.scanning" class="text-sm text-gray-600 mb-4">
+              <svg class="animate-spin h-5 w-5 inline mr-2 text-blue-600" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Scanning for QR code...
+            </div>
+
+            <!-- Instructions -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left mb-4">
+              <div class="flex items-start">
+                <svg class="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div class="text-sm text-blue-800">
+                  <p class="font-semibold mb-1">How to scan:</p>
+                  <ol class="list-decimal list-inside space-y-1 text-blue-700">
+                    <li>Click "Start Camera Scanner"</li>
+                    <li><strong>Allow camera access</strong> when your browser prompts you</li>
+                    <li>Point your camera at the QR code</li>
+                    <li>The payment form will open automatically</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <!-- Camera Permission Tips -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left">
+              <div class="flex items-start">
+                <svg class="w-5 h-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <div class="text-xs text-yellow-800">
+                  <p class="font-semibold mb-2">📱 Camera Not Working?</p>
+                  
+                  <p class="font-semibold text-green-600 mb-1">✨ Easy Solution: Use "Upload QR Code Image" instead!</p>
+                  <p class="mb-2 text-gray-700">Take a screenshot/photo of the QR code, then upload it.</p>
+                  
+                  <p class="font-semibold mb-1">Or fix camera permissions:</p>
+                  <ul class="list-disc list-inside space-y-1 text-yellow-700">
+                    <li><strong>Samsung/Android Chrome:</strong>
+                      <br/>• Tap address bar → 🔒 icon → Permissions → Camera → Allow
+                      <br/>• Or: Settings → Apps → Chrome → Permissions → Camera → Allow
+                    </li>
+                    <li><strong>Samsung Internet Browser:</strong>
+                      <br/>• Menu (3 lines) → Settings → Sites and downloads → Site permissions → Camera → Allow
+                    </li>
+                    <li><strong>iPhone Safari:</strong> Use Safari (not Chrome) for camera access</li>
+                    <li><strong>After allowing:</strong> Refresh page and try again</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+  <!-- Payment Modal (appears after scanning QR) -->
+  <div x-show="paymentModal.show" 
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+       @click.self="closePaymentModal()">
+    
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform scale-95"
+         x-transition:enter-end="opacity-100 transform scale-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform scale-100"
+         x-transition:leave-end="opacity-0 transform scale-95">
+      
+      <!-- Close Button -->
+      <button @click="closePaymentModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+
+      <!-- Modal Header -->
+      <div class="text-center mb-6">
+        <div class="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <h3 class="text-2xl font-bold text-gray-800">Send Payment</h3>
+        <p class="text-gray-600 text-sm mt-1">Enter amount to send</p>
+      </div>
+
+      <!-- Recipient Info -->
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 border border-blue-200">
+        <p class="text-xs text-gray-600 mb-1">Sending to:</p>
+        <p class="font-bold text-lg text-gray-800" x-text="paymentModal.recipient.name"></p>
+        <p class="text-sm text-gray-600" x-text="paymentModal.recipient.email"></p>
+      </div>
+
+      <!-- Payment Form -->
+      <form @submit.prevent="sendPaymentFromQR()">
+        <div class="mb-6">
+          <label class="block text-gray-700 text-sm font-semibold mb-2">Amount (₱)</label>
+          <input 
+            type="number" 
+            x-model="paymentModal.amount"
+            step="0.01"
+            min="1"
+            required
+            autofocus
+            class="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            placeholder="0.00"
+          >
+          <p class="text-xs text-gray-500 mt-2">Your balance: ₱<span x-text="formatMoney(user.balance)"></span></p>
+        </div>
+
+        <div class="flex space-x-3">
+          <button 
+            type="button"
+            @click="closePaymentModal()"
+            class="flex-1 bg-gray-200 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-300 transition">
+            Cancel
+          </button>
+          <button 
+            type="submit"
+            :disabled="paymentModal.sending"
+            class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-3 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
+            <span x-show="!paymentModal.sending">Send Payment</span>
+            <span x-show="paymentModal.sending" class="flex items-center justify-center">
+              <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Sending...
+            </span>
+          </button>
+        </div>
+      </form>
     </div>
   </div>
 
