@@ -28,9 +28,9 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center h-16">
         <div class="flex items-center">
-          <svg class="w-8 h-8 text-white mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
+          <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mr-3">
+            <span class="text-white text-2xl font-bold">₱</span>
+          </div>
           <h1 class="text-white text-xl font-bold">PayApp</h1>
         </div>
         <div class="flex items-center space-x-4">
@@ -65,9 +65,7 @@
           class="flex-1 px-6 py-4 text-center transition-colors duration-200"
           :class="activeTab === 'send' ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600 font-semibold' : 'text-gray-600 hover:bg-gray-50'">
           <div class="flex items-center justify-center">
-            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
+            <span class="text-xl font-bold mr-2">₱</span>
             Send Money
           </div>
         </button>
@@ -394,7 +392,7 @@
         </div>
 
         <!-- Receive Money Mode -->
-        <div x-show="qrMode === 'receive'" class="text-center">
+        <div x-show="qrMode === 'receive'" class="flex flex-col items-center">
           <h3 class="text-2xl font-bold text-gray-800 mb-2">Your Payment QR Code</h3>
           <p class="text-gray-600 mb-8">Show this QR code to receive payments from others</p>
           
@@ -405,12 +403,12 @@
             </svg>
           </div>
 
-          <div x-show="paymentQr.loaded" class="bg-white rounded-2xl shadow-xl p-8 inline-block">
-            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 mb-6 border-2 border-green-200">
+          <div x-show="paymentQr.loaded" class="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full">
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 mb-6 border-2 border-green-200 flex justify-center">
               <img :src="paymentQr.dataUrl" alt="Payment QR Code" class="mx-auto" style="max-width: 300px;">
             </div>
             
-            <div class="text-left space-y-4">
+            <div class="text-left space-y-4 mb-6">
               <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
                 <p class="text-sm text-gray-600 mb-2">📱 Your Payment Details:</p>
                 <p class="font-semibold text-lg text-gray-800" x-text="paymentQr.userData.name"></p>
@@ -434,16 +432,19 @@
                 </div>
               </div>
             </div>
-          </div>
 
-          <button 
-            @click="generatePaymentQRCode()" 
-            class="mt-6 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-lg hover:shadow-xl">
-            <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-            </svg>
-            Regenerate QR Code
-          </button>
+            <!-- Regenerate Button - Centered at Bottom -->
+            <div class="flex justify-center">
+              <button 
+                @click="generatePaymentQRCode()" 
+                class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition shadow-lg hover:shadow-xl">
+                <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                Regenerate QR Code
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Scan QR Code Mode -->
@@ -586,9 +587,7 @@
       <!-- Modal Header -->
       <div class="text-center mb-6">
         <div class="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-          <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
+          <span class="text-3xl font-bold text-blue-600">₱</span>
         </div>
         <h3 class="text-2xl font-bold text-gray-800">Send Payment</h3>
         <p class="text-gray-600 text-sm mt-1">Enter amount to send</p>

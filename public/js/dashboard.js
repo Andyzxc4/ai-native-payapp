@@ -57,6 +57,10 @@ function dashboardApp() {
     chatTyping: false,
     voiceListening: false,
     recognition: null,
+    chatContext: {
+      lastTopic: null,
+      userName: null
+    },
     alert: {
       show: false,
       type: 'success',
@@ -178,43 +182,28 @@ function dashboardApp() {
     },
 
     calculateStats() {
-      // Get today's date at midnight
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
       let totalSentToday = 0;
       let totalReceived = 0;
       let transactionCount = this.transactions.length;
 
+      // Get today's date in YYYY-MM-DD format for comparison
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0]; // e.g., "2025-10-27"
+
       this.transactions.forEach(transaction => {
-        const transactionDate = new Date(transaction.timestamp);
-        transactionDate.setHours(0, 0, 0, 0);
-        
-        if (transaction.type === 'sent') {
-          totalReceived += transaction.amount; // Money they received from others
-          // Check if sent today
-          if (transactionDate.getTime() === today.getTime()) {
-            // This is money I sent today (but in transactions, if type is 'sent', it's actually received by me)
-            // Wait, let me reconsider...
-            // If type === 'sent', that means I sent it to someone
-            // If type === 'received', that means I received it from someone
-          }
-        } else if (transaction.type === 'received') {
-          totalReceived += transaction.amount;
+        // Extract date from timestamp (handles both Date objects and strings)
+        let transactionDateStr;
+        if (typeof transaction.timestamp === 'string') {
+          // If timestamp is a string like "2025-10-27 14:30:00" or "2025-10-27T14:30:00"
+          transactionDateStr = transaction.timestamp.split(' ')[0].split('T')[0];
+        } else {
+          // If it's a Date object
+          transactionDateStr = new Date(transaction.timestamp).toISOString().split('T')[0];
         }
-      });
-
-      // Recalculate properly
-      totalSentToday = 0;
-      totalReceived = 0;
-
-      this.transactions.forEach(transaction => {
-        const transactionDate = new Date(transaction.timestamp);
-        transactionDate.setHours(0, 0, 0, 0);
         
         if (transaction.type === 'sent') {
-          // Money I sent
-          if (transactionDate.getTime() === today.getTime()) {
+          // Money I sent - count only today's
+          if (transactionDateStr === todayStr) {
             totalSentToday += transaction.amount;
           }
         } else if (transaction.type === 'received') {
@@ -228,6 +217,8 @@ function dashboardApp() {
         totalReceived: totalReceived,
         transactionCount: transactionCount
       };
+
+      console.log('Stats calculated:', this.stats); // Debug log
     },
 
     async logout() {
@@ -639,10 +630,10 @@ function dashboardApp() {
       this.chatTyping = true;
 
       // Simulate thinking delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 600));
 
-      // Get bot response
-      const response = this.getBotResponse(message);
+      // Get bot response (now async to fetch real data)
+      const response = await this.getBotResponse(message);
       
       // Add bot response
       this.addChatMessage('bot', response);
@@ -679,22 +670,140 @@ function dashboardApp() {
 
     clearChat() {
       this.chatMessages = [];
+      this.chatContext = {
+        lastTopic: null,
+        userName: null
+      };
       this.speak('Chat cleared. How can I help you?');
     },
 
-    getBotResponse(question) {
+    async getBotResponse(question) {
       const q = question.toLowerCase();
 
-      // Knowledge base for app-related questions
+      // Set user name context
+      if (!this.chatContext.userName && this.user.name) {
+        this.chatContext.userName = this.user.name.split(' ')[0]; // First name
+      }
+
+      // === CONVERSATIONAL RESPONSES ===
+      
+      // Greetings
+      if (q.match(/\b(hi|hello|hey|greetings|good morning|good afternoon|good evening)\b/)) {
+        const greetings = [
+          `Hello ${this.chatContext.userName || 'there'}! 👋 I'm your PayApp Assistant. How can I help you today?`,
+          `Hi ${this.chatContext.userName || 'there'}! Great to see you! What can I help you with?`,
+          `Hey ${this.chatContext.userName || 'there'}! 😊 I'm here to help. What do you need?`
+        ];
+        return greetings[Math.floor(Math.random() * greetings.length)];
+      }
+
+      // How are you / How's it going
+      if (q.match(/\b(how are you|how's it going|how do you do|what's up|wassup)\b/)) {
+        const responses = [
+          `I'm doing great, thanks for asking! 😊 How can I assist you with your PayApp account today?`,
+          `I'm fantastic! Ready to help you with anything you need. What can I do for you?`,
+          `I'm doing wonderful! How about you? What can I help you with today?`
+        ];
+        return responses[Math.floor(Math.random() * responses.length)];
+      }
+
+      // What's your name
+      if (q.match(/\b(what's your name|who are you|what are you called|your name)\b/)) {
+        return `I'm your friendly PayApp Assistant! 🤖 I'm here to help you with payments, transactions, and anything related to your account. What would you like to know?`;
+      }
+
+      // Thanks
+      if (q.match(/\b(thank|thanks|thx|appreciate)\b/)) {
+        const thanks = [
+          `You're very welcome! 😊 Is there anything else I can help you with?`,
+          `Happy to help! Feel free to ask if you need anything else.`,
+          `My pleasure! Let me know if you have any other questions.`
+        ];
+        return thanks[Math.floor(Math.random() * thanks.length)];
+      }
+
+      // Goodbye
+      if (q.match(/\b(bye|goodbye|see you|later|cya)\b/)) {
+        return `Goodbye ${this.chatContext.userName || 'there'}! Have a great day! 👋 Come back if you need any help.`;
+      }
+
+      // === REAL-TIME DATA QUERIES ===
+
+      // Balance inquiry - SHOW ACTUAL BALANCE
+      if (q.match(/\b(balance|how much money|my funds|account balance|check balance)\b/) && 
+          q.match(/\b(what|show|tell|check|my|current)\b/)) {
+        this.chatContext.lastTopic = 'balance';
+        const balance = this.formatMoney(this.user.balance);
+        return `Your current balance is ₱${balance}. ${this.user.balance < 100 ? '💡 Looks like your balance is running low.' : '✅ You have sufficient funds for transactions.'}`;
+      }
+
+      // Transaction history inquiry - SHOW ACTUAL TRANSACTIONS
+      if (q.match(/\b(transaction|history|past payment|previous payment|recent transaction)\b/) &&
+          q.match(/\b(what|show|tell|view|see|my)\b/) &&
+          !q.match(/\b(how do|how to|how can)\b/)) {
+        this.chatContext.lastTopic = 'transactions';
+        
+        if (this.transactions.length === 0) {
+          return `You don't have any transactions yet. Once you send or receive money, they'll show up in your transaction history! 💸`;
+        }
+
+        const recentTransactions = this.transactions.slice(0, 5); // Get last 5 transactions
+        let response = `Here are your recent transactions:\n\n`;
+        
+        recentTransactions.forEach((tx, index) => {
+          const type = tx.type === 'sent' ? '📤 Sent' : '📥 Received';
+          const amount = this.formatMoney(tx.amount);
+          const party = tx.otherParty.name;
+          const timeAgo = this.formatDate(tx.timestamp);
+          response += `${index + 1}. ${type} ₱${amount} ${tx.type === 'sent' ? 'to' : 'from'} ${party} (${timeAgo})\n`;
+        });
+
+        if (this.transactions.length > 5) {
+          response += `\n... and ${this.transactions.length - 5} more transactions. Visit the History tab to see all!`;
+        }
+
+        return response;
+      }
+
+      // Stats inquiry - SHOW ACTUAL STATS
+      if (q.match(/\b(how much|total|spent|received|statistics|stats)\b/) &&
+          q.match(/\b(today|sent|received)\b/)) {
+        this.chatContext.lastTopic = 'stats';
+        const sentToday = this.formatMoney(this.stats.totalSentToday);
+        const received = this.formatMoney(this.stats.totalReceived);
+        const count = this.stats.transactionCount;
+        
+        return `📊 Here are your statistics:\n\n• Today's Sent: ₱${sentToday}\n• Total Received: ₱${received}\n• Transaction Count: ${count}\n\nYou can see these stats in the Quick Info box on the Send Money tab!`;
+      }
+
+      // Check if can afford amount
+      if (q.match(/\b(can i|am i able|do i have enough|afford)\b/) && 
+          q.match(/\b(send|pay|transfer)\b/)) {
+        const amountMatch = q.match(/(\d+)/);
+        if (amountMatch) {
+          const amount = parseInt(amountMatch[0]);
+          const balance = this.user.balance;
+          if (balance >= amount) {
+            return `Yes! ✅ You have ₱${this.formatMoney(balance)}, so you can send ₱${amount}. Would you like to send money now? Go to the Send Money tab!`;
+          } else {
+            const needed = amount - balance;
+            return `Sorry, you don't have enough balance. ❌ You need ₱${this.formatMoney(needed)} more. Your current balance is ₱${this.formatMoney(balance)}.`;
+          }
+        }
+        return `Your current balance is ₱${this.formatMoney(this.user.balance)}. How much would you like to send?`;
+      }
+
+      // === ENHANCED KNOWLEDGE BASE ===
+      
       const responses = {
         // Payment-related
         send: {
-          keywords: ['send', 'transfer', 'pay', 'payment', 'money', 'give'],
-          response: "To send money:\n1. Go to the 'Send Money' tab\n2. Enter the recipient's email address\n3. Enter the amount you want to send\n4. Click 'Send Payment'\n\nYou can also use the 'QR Code' tab to scan someone's payment QR code for faster transactions!"
+          keywords: ['how to send', 'how do i send', 'how can i send', 'send money to', 'transfer money', 'make payment'],
+          response: `To send money:\n1. Go to the 'Send Money' tab\n2. Enter the recipient's email address\n3. Enter the amount you want to send\n4. Click 'Send Payment'\n\n💡 Pro tip: You can also use the 'QR Code' tab to scan someone's payment QR code for faster transactions! Your current balance is ₱${this.formatMoney(this.user.balance)}.`
         },
         receive: {
-          keywords: ['receive', 'get paid', 'incoming', 'collect'],
-          response: "To receive money:\n1. Go to the 'QR Code' tab\n2. Click 'Receive Money' to generate your payment QR code\n3. Show this QR code to the person who wants to pay you\n4. They scan it and send the payment\n\nYou'll receive a notification when someone sends you money!"
+          keywords: ['how to receive', 'how do i receive', 'get paid', 'collect money', 'receive payment'],
+          response: "To receive money:\n1. Go to the 'QR Code' tab\n2. Click 'Receive Money' to generate your payment QR code\n3. Show this QR code to the person who wants to pay you\n4. They scan it and send the payment\n\n✨ You'll receive a notification when someone sends you money! Your balance will update automatically."
         },
         qr: {
           keywords: ['qr', 'qr code', 'scan', 'camera', 'quick'],
@@ -705,8 +814,8 @@ function dashboardApp() {
           response: "Your current balance is displayed at the top of your dashboard in a large card.\n\nIt shows:\n• Available Balance in ₱\n• Your email address\n\nYour balance updates automatically after each transaction!"
         },
         history: {
-          keywords: ['history', 'transactions', 'past', 'previous', 'record', 'log'],
-          response: "To view your transaction history:\n1. Click the 'History' tab\n2. You'll see all your sent and received payments\n3. Each transaction shows:\n   • Date and time\n   • Amount (red for sent, green for received)\n   • Recipient/Sender name and email\n\nClick the refresh button to update your history!"
+          keywords: ['how to view history', 'how do i see', 'where is history', 'find transactions', 'view my transactions'],
+          response: `To view your transaction history:\n1. Click the 'History' tab (last tab on the right)\n2. You'll see all your sent and received payments\n3. Each transaction shows:\n   • Date and time\n   • Amount (red for sent, green for received)\n   • Recipient/Sender name and email\n\n📊 You currently have ${this.stats.transactionCount} transactions. Click the refresh button to update your history!`
         },
         helpdesk: {
           keywords: ['help', 'support', 'assistant', 'chatbot', 'question'],
@@ -730,27 +839,91 @@ function dashboardApp() {
         }
       };
 
-      // Check for matching keywords
+      // === MORE CONVERSATIONAL HANDLING ===
+
+      // Phone number payments
+      if (q.match(/\b(phone number|mobile number|contact number)\b/) && 
+          q.match(/\b(send|pay|transfer)\b/)) {
+        return `Currently, you can only send money to registered email addresses. 📧 We don't support phone number payments yet. Would you like to send money using an email address instead? Just go to the Send Money tab!`;
+      }
+
+      // Multiple recipients
+      if (q.match(/\b(multiple|many|several)\b/) && 
+          q.match(/\b(people|recipients|users)\b/)) {
+        return `Right now, you can send money to one person at a time. For multiple payments, just repeat the process for each recipient. Quick tip: Use the QR Code feature for faster repeated payments! 🚀`;
+      }
+
+      // Payment limits
+      if (q.match(/\b(limit|maximum|max|minimum|min)\b/) && 
+          q.match(/\b(send|payment|transfer)\b/)) {
+        return `You can send any amount as long as you have sufficient balance! Your current balance is ₱${this.formatMoney(this.user.balance)}. The only limit is what's in your account. 💰`;
+      }
+
+      // Cancel payment
+      if (q.match(/\b(cancel|undo|reverse|refund)\b/) && 
+          q.match(/\b(payment|transaction|transfer)\b/)) {
+        return `⚠️ Payments are instant and cannot be cancelled or reversed once sent. Always double-check the recipient's email and amount before confirming. Stay safe! 🔒`;
+      }
+
+      // Check for matching keywords in knowledge base
       for (const [category, data] of Object.entries(responses)) {
         for (const keyword of data.keywords) {
           if (q.includes(keyword)) {
+            this.chatContext.lastTopic = category;
             return data.response;
           }
         }
       }
 
-      // Greetings
-      if (q.match(/\b(hi|hello|hey|greetings)\b/)) {
-        return "Hello! 👋 I'm your PayApp Assistant. I can help you with payments, QR codes, transaction history, and more. What would you like to know?";
+      // === FRIENDLY FALLBACKS FOR NON-APP QUESTIONS ===
+
+      // Jokes
+      if (q.match(/\b(joke|funny|laugh)\b/)) {
+        return `I can't tell jokes, but I can help make your payments smooth and stress-free! 😊 That's pretty cool, right? What can I help you with today?`;
       }
 
-      // Thanks
-      if (q.match(/\b(thank|thanks|thx)\b/)) {
-        return "You're welcome! Feel free to ask if you need any more help with PayApp! 😊";
+      // Weather
+      if (q.match(/\b(weather|temperature|forecast)\b/)) {
+        return `I don't have weather information, but I can help you with your PayApp account! ⛅ What would you like to know about payments or transactions?`;
       }
 
-      // Default response for irrelevant questions
-      return "We can't solve this issue for now. I'm designed to help with PayApp-related questions only, such as:\n• Sending and receiving payments\n• Using QR code features\n• Viewing transaction history\n• Managing your account\n\nPlease ask me about these topics!";
+      // Food/Restaurant
+      if (q.match(/\b(food|restaurant|eat|hungry)\b/)) {
+        return `I can't help with food recommendations, but I can help you send money to pay for meals! 🍔 Need to send someone money? I'm here to help!`;
+      }
+
+      // Time/Date
+      if (q.match(/\b(time|date|today|day)\b/) && !q.match(/\b(transaction|payment|sent|received)\b/)) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        return `Today is ${dateStr}, and the time is ${timeStr}. 🕐 How can I help you with your PayApp account?`;
+      }
+
+      // Math/Calculations
+      if (q.match(/\b(calculate|math|plus|minus|add|subtract)\b/)) {
+        return `I'm not a calculator, but I can help you manage your money! 🧮 Want to check your balance or view your transactions? Just ask!`;
+      }
+
+      // === CONTEXTUAL FOLLOW-UPS ===
+      
+      // If user says "yes" or "sure" after certain topics
+      if (q.match(/\b(yes|yeah|sure|okay|ok|yep)\b/) && this.chatContext.lastTopic) {
+        if (this.chatContext.lastTopic === 'send') {
+          return `Great! Go to the 'Send Money' tab, enter the recipient's email and amount, then click 'Send Payment'. Your current balance is ₱${this.formatMoney(this.user.balance)}. 💸`;
+        } else if (this.chatContext.lastTopic === 'balance') {
+          return `Awesome! Your balance is ₱${this.formatMoney(this.user.balance)}. Need anything else?`;
+        }
+      }
+
+      // === DEFAULT FRIENDLY FALLBACK ===
+      const fallbacks = [
+        `I can only help with questions related to your PayApp account. 😊 Try asking me about:\n• Checking your balance\n• Viewing transaction history\n• Sending or receiving money\n• Using QR code payments\n\nWhat would you like to know?`,
+        `Hmm, I'm not sure about that, but I'm great at helping with PayApp! 🤖 You can ask me about your balance, transactions, or how to send money. What can I help you with?`,
+        `That's outside my expertise, but I'm your PayApp expert! 💪 Ask me anything about payments, balance, or transaction history. How can I assist you?`
+      ];
+      
+      return fallbacks[Math.floor(Math.random() * fallbacks.length)];
     }
   };
 }
