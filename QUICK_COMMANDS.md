@@ -12,9 +12,16 @@ npm start
 ```bash
 Ctrl + C
 ```
-Or if that doesn't work:
+Or if that doesn't work, try these (in order):
 ```bash
+# Method 1: By process name (recommended)
+pkill -f "node server.js"
+
+# Method 2: By port
 lsof -ti:3000 | xargs kill -9
+
+# Method 3: Kill all node (nuclear option)
+killall node
 ```
 
 ### **Check if Running:**
@@ -39,14 +46,26 @@ npm start
 
 ## ⚡ **One-Line Commands**
 
-### **Clean Restart:**
+### **Clean Restart (Option 1 - Using pkill):**
+```bash
+pkill -f "node server.js"; sleep 1; cd /Users/andre-d.lacra/ai-native-projects/projects-in-git/ai-native-payapp && npm start
+```
+
+### **Clean Restart (Option 2 - Using port):**
 ```bash
 lsof -ti:3000 | xargs kill -9 2>/dev/null; sleep 1; cd /Users/andre-d.lacra/ai-native-projects/projects-in-git/ai-native-payapp && npm start
 ```
 
-### **Force Stop:**
+### **Force Stop Options:**
 ```bash
+# By process name (recommended)
+pkill -f "node server.js"
+
+# By port
 lsof -ti:3000 | xargs kill -9
+
+# Kill all node
+killall node
 ```
 
 ### **Start in Background:**

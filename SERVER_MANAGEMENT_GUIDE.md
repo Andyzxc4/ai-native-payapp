@@ -96,7 +96,7 @@ Server stopped
 
 ---
 
-### **Method 2: Force Kill (If Ctrl+C doesn't work)**
+### **Method 2: Force Kill by Port (If Ctrl+C doesn't work)**
 
 ```bash
 lsof -ti:3000 | xargs kill -9
@@ -118,7 +118,48 @@ lsof -ti:3000 | xargs kill -9 2>/dev/null
 
 ---
 
-### **Method 3: Find and Kill Manually**
+### **Method 3: Using pkill (Kill by Process Name)**
+
+```bash
+pkill -f "node server.js"
+```
+
+**What this does:**
+- `pkill` → Process kill command
+- `-f` → Match full command line (not just process name)
+- `"node server.js"` → The exact command you want to kill
+
+✅ Simple and intuitive  
+✅ Kills specific Node.js process  
+✅ No need to find port or PID  
+
+**Alternative pkill commands:**
+```bash
+# Kill by exact match
+pkill -f "node server.js"
+
+# Kill any node process running server.js
+pkill -f server.js
+
+# Kill with signal 9 (force kill)
+pkill -9 -f "node server.js"
+
+# Show what would be killed (dry run)
+pgrep -f "node server.js"
+```
+
+**⚠️ Be Careful:**
+```bash
+# DON'T DO THIS - kills ALL node processes!
+pkill node
+
+# DO THIS - specific to your server
+pkill -f "node server.js"
+```
+
+---
+
+### **Method 4: Find and Kill Manually**
 
 **Step 1: Find the process**
 ```bash
@@ -137,6 +178,42 @@ kill -9 12345
 ```
 
 Replace `12345` with your actual PID.
+
+---
+
+### **Method 5: Using killall (Kill All Node Processes)**
+
+```bash
+killall node
+```
+
+**What this does:**
+- Kills **ALL** Node.js processes on your system
+- Use with caution!
+
+⚠️ **Warning:** This kills every node process, not just your server!
+
+**When to use:**
+- Last resort when nothing else works
+- You're sure no other Node.js apps are running
+
+---
+
+## 🔍 **Comparison: Which Method to Use?**
+
+| Method | Command | Best For | Safety |
+|--------|---------|----------|--------|
+| **Ctrl+C** | `Ctrl + C` | Foreground processes, daily use | ✅ Safest |
+| **By Port** | `lsof -ti:3000 \| xargs kill -9` | Background processes, specific port | ✅ Safe |
+| **pkill** | `pkill -f "node server.js"` | Specific process by name | ✅ Safe if careful |
+| **killall** | `killall node` | Emergency only | ⚠️ Kills all Node |
+| **Manual** | Find PID then `kill -9 PID` | When you need control | ✅ Safe |
+
+**Our Recommendation:**
+1. **First try:** `Ctrl + C`
+2. **If that fails:** `pkill -f "node server.js"`
+3. **Still running?:** `lsof -ti:3000 | xargs kill -9`
+4. **Nuclear option:** `killall node`
 
 ---
 
