@@ -52,6 +52,11 @@ function dashboardApp() {
       amount: '',
       sending: false
     },
+    chatMessages: [],
+    chatInput: '',
+    chatTyping: false,
+    voiceListening: false,
+    recognition: null,
     alert: {
       show: false,
       type: 'success',
@@ -64,6 +69,7 @@ function dashboardApp() {
       await this.loadTransactions();
       await this.loadUsers();
       this.connectToRealTimeUpdates();
+      this.initVoiceRecognition();
     },
 
     async checkSession() {
@@ -571,6 +577,180 @@ function dashboardApp() {
         day: 'numeric',
         year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
       });
+    },
+
+    // ===== HELPDESK CHATBOT FUNCTIONS =====
+
+    initVoiceRecognition() {
+      // Check if browser supports speech recognition
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        this.recognition = new SpeechRecognition();
+        this.recognition.continuous = false;
+        this.recognition.interimResults = false;
+        this.recognition.lang = 'en-US';
+
+        this.recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          this.chatInput = transcript;
+          this.voiceListening = false;
+          // Auto-send after voice input
+          setTimeout(() => this.sendChatMessage(), 500);
+        };
+
+        this.recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          this.voiceListening = false;
+          this.showAlert('error', 'Voice input failed. Please try again or type your question.');
+        };
+
+        this.recognition.onend = () => {
+          this.voiceListening = false;
+        };
+      }
+    },
+
+    toggleVoiceInput() {
+      if (!this.recognition) {
+        this.showAlert('error', 'Voice input is not supported in this browser. Please type your question.');
+        return;
+      }
+
+      if (this.voiceListening) {
+        this.recognition.stop();
+        this.voiceListening = false;
+      } else {
+        this.chatInput = '';
+        this.recognition.start();
+        this.voiceListening = true;
+        this.speak('I\'m listening. Please speak your question now.');
+      }
+    },
+
+    async sendChatMessage() {
+      const message = this.chatInput.trim();
+      if (!message) return;
+
+      // Add user message
+      this.addChatMessage('user', message);
+      this.chatInput = '';
+
+      // Show typing indicator
+      this.chatTyping = true;
+
+      // Simulate thinking delay
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Get bot response
+      const response = this.getBotResponse(message);
+      
+      // Add bot response
+      this.addChatMessage('bot', response);
+      this.chatTyping = false;
+
+      // Speak the response
+      this.speak(response);
+
+      // Scroll to bottom
+      this.scrollChatToBottom();
+    },
+
+    addChatMessage(type, text) {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      
+      this.chatMessages.push({
+        type: type,
+        text: text,
+        time: time,
+        timestamp: now
+      });
+
+      // Scroll after message is added
+      setTimeout(() => this.scrollChatToBottom(), 100);
+    },
+
+    scrollChatToBottom() {
+      const chatContainer = document.getElementById('chat-messages');
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    },
+
+    clearChat() {
+      this.chatMessages = [];
+      this.speak('Chat cleared. How can I help you?');
+    },
+
+    getBotResponse(question) {
+      const q = question.toLowerCase();
+
+      // Knowledge base for app-related questions
+      const responses = {
+        // Payment-related
+        send: {
+          keywords: ['send', 'transfer', 'pay', 'payment', 'money', 'give'],
+          response: "To send money:\n1. Go to the 'Send Money' tab\n2. Enter the recipient's email address\n3. Enter the amount you want to send\n4. Click 'Send Payment'\n\nYou can also use the 'QR Code' tab to scan someone's payment QR code for faster transactions!"
+        },
+        receive: {
+          keywords: ['receive', 'get paid', 'incoming', 'collect'],
+          response: "To receive money:\n1. Go to the 'QR Code' tab\n2. Click 'Receive Money' to generate your payment QR code\n3. Show this QR code to the person who wants to pay you\n4. They scan it and send the payment\n\nYou'll receive a notification when someone sends you money!"
+        },
+        qr: {
+          keywords: ['qr', 'qr code', 'scan', 'camera', 'quick'],
+          response: "QR Code payments are easy!\n\n📱 To receive money:\n• Go to 'QR Code' tab → 'Receive Money'\n• Show your QR code to the payer\n\n📸 To pay someone:\n• Go to 'QR Code' tab → 'Scan QR Code'\n• Click 'Start Camera Scanner' or 'Upload QR Code Image'\n• Scan their QR code\n• Enter amount and send!"
+        },
+        balance: {
+          keywords: ['balance', 'money', 'how much', 'account', 'funds'],
+          response: "Your current balance is displayed at the top of your dashboard in a large card.\n\nIt shows:\n• Available Balance in ₱\n• Your email address\n\nYour balance updates automatically after each transaction!"
+        },
+        history: {
+          keywords: ['history', 'transactions', 'past', 'previous', 'record', 'log'],
+          response: "To view your transaction history:\n1. Click the 'History' tab\n2. You'll see all your sent and received payments\n3. Each transaction shows:\n   • Date and time\n   • Amount (red for sent, green for received)\n   • Recipient/Sender name and email\n\nClick the refresh button to update your history!"
+        },
+        helpdesk: {
+          keywords: ['help', 'support', 'assistant', 'chatbot', 'question'],
+          response: "I'm your PayApp Assistant! I can help you with:\n• Sending and receiving payments\n• Using QR code features\n• Viewing transaction history\n• Managing your account\n• Understanding app features\n\nJust ask me anything about the app, and I'll do my best to help!"
+        },
+        login: {
+          keywords: ['login', 'log in', 'sign in', 'access', 'account'],
+          response: "To login:\n1. Go to the login page\n2. Enter your email address\n3. Enter your password\n4. Click 'Login'\n\nIf you're on mobile, you can also scan the network access QR code from another device to quickly access the app!"
+        },
+        logout: {
+          keywords: ['logout', 'log out', 'sign out', 'exit'],
+          response: "To logout:\n1. Click the 'Logout' button in the top-right corner of the dashboard\n2. You'll be redirected to the login page\n\nMake sure to logout when using shared devices for security!"
+        },
+        security: {
+          keywords: ['security', 'safe', 'secure', 'protect', 'password', 'privacy'],
+          response: "Security tips:\n• Never share your password\n• Always logout on shared devices\n• Verify recipient email before sending money\n• Use strong, unique passwords\n• Keep your balance information private\n\nPayApp uses secure session management to protect your account!"
+        },
+        error: {
+          keywords: ['error', 'problem', 'issue', 'bug', 'not working', 'broken'],
+          response: "If you're experiencing issues:\n1. Try refreshing the page (Cmd+Shift+R or Ctrl+Shift+R)\n2. Check your internet connection\n3. Clear your browser cache\n4. Make sure you're logged in\n5. Check if you have sufficient balance for payments\n\nIf the problem persists, contact support!"
+        }
+      };
+
+      // Check for matching keywords
+      for (const [category, data] of Object.entries(responses)) {
+        for (const keyword of data.keywords) {
+          if (q.includes(keyword)) {
+            return data.response;
+          }
+        }
+      }
+
+      // Greetings
+      if (q.match(/\b(hi|hello|hey|greetings)\b/)) {
+        return "Hello! 👋 I'm your PayApp Assistant. I can help you with payments, QR codes, transaction history, and more. What would you like to know?";
+      }
+
+      // Thanks
+      if (q.match(/\b(thank|thanks|thx)\b/)) {
+        return "You're welcome! Feel free to ask if you need any more help with PayApp! 😊";
+      }
+
+      // Default response for irrelevant questions
+      return "We can't solve this issue for now. I'm designed to help with PayApp-related questions only, such as:\n• Sending and receiving payments\n• Using QR code features\n• Viewing transaction history\n• Managing your account\n\nPlease ask me about these topics!";
     }
   };
 }
