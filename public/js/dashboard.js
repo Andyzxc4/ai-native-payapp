@@ -52,6 +52,22 @@ function dashboardApp() {
       amount: '',
       sending: false
     },
+    otpModal: {
+      show: false,
+      otpId: null,
+      code: ['', '', '', '', '', ''],
+      recipient: {
+        name: '',
+        email: ''
+      },
+      amount: 0,
+      expiresIn: 5,
+      verifying: false,
+      attemptsLeft: 3,
+      locked: false,
+      lockoutMinutes: 0,
+      error: ''
+    },
     chatMessages: [],
     chatInput: '',
     chatTyping: false,
@@ -129,28 +145,172 @@ function dashboardApp() {
       this.hideAlert();
 
       try {
-        const response = await fetch('/api/send-payment', {
+        // Request OTP for payment confirmation
+        await this.requestOTP(this.payment.receiverEmail, parseFloat(this.payment.amount));
+        
+        // Reset loading state
+        this.payment.loading = false;
+      } catch (error) {
+        this.showAlert('error', error.message);
+        this.speak(error.message);
+        this.payment.loading = false;
+      }
+    },
+
+    async requestOTP(receiverEmail, amount) {
+      try {
+        const response = await fetch('/api/request-otp', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            receiverEmail: this.payment.receiverEmail,
-            amount: parseFloat(this.payment.amount)
+            receiverEmail: receiverEmail,
+            amount: amount
           })
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || 'Payment failed');
+          throw new Error(data.error || 'Failed to request OTP');
         }
 
+        // Show OTP modal
+        this.otpModal.show = true;
+        this.otpModal.otpId = data.otpId;
+        this.otpModal.recipient.name = data.recipient.name;
+        this.otpModal.recipient.email = data.recipient.email;
+        this.otpModal.amount = amount;
+        this.otpModal.expiresIn = data.expiresIn;
+        this.otpModal.code = ['', '', '', '', '', ''];
+        this.otpModal.error = '';
+        this.otpModal.attemptsLeft = 3;
+        this.otpModal.locked = false;
+
+        // TTS notification
+        this.speak(`OTP generated. Please enter the 6-digit code: ${data.code.split('').join(', ')}. The code expires in ${data.expiresIn} minutes.`);
+
+        // Focus on first OTP input
+        setTimeout(() => {
+          const firstInput = document.querySelector('.otp-input');
+          if (firstInput) firstInput.focus();
+        }, 100);
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    handleOTPInput(index, event) {
+      const value = event.target.value;
+      
+      // Only allow digits
+      if (!/^\d*$/.test(value)) {
+        event.target.value = '';
+        return;
+      }
+
+      // Update code array
+      this.otpModal.code[index] = value.slice(-1);
+
+      // Auto-focus next input
+      if (value && index < 5) {
+        const nextInput = document.querySelector(`[data-otp-index="${index + 1}"]`);
+        if (nextInput) nextInput.focus();
+      }
+
+      // Auto-submit when all 6 digits entered
+      if (index === 5 && value) {
+        this.verifyOTP();
+      }
+    },
+
+    handleOTPKeydown(index, event) {
+      // Handle backspace
+      if (event.key === 'Backspace' && !this.otpModal.code[index] && index > 0) {
+        const prevInput = document.querySelector(`[data-otp-index="${index - 1}"]`);
+        if (prevInput) {
+          prevInput.focus();
+          this.otpModal.code[index - 1] = '';
+        }
+      }
+    },
+
+    handleOTPPaste(event) {
+      event.preventDefault();
+      const paste = event.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+      
+      for (let i = 0; i < paste.length && i < 6; i++) {
+        this.otpModal.code[i] = paste[i];
+      }
+
+      // Focus last filled input or verify if complete
+      if (paste.length === 6) {
+        this.verifyOTP();
+      } else if (paste.length > 0) {
+        const nextInput = document.querySelector(`[data-otp-index="${paste.length}"]`);
+        if (nextInput) nextInput.focus();
+      }
+    },
+
+    async verifyOTP() {
+      if (this.otpModal.verifying || this.otpModal.locked) return;
+
+      const code = this.otpModal.code.join('');
+      if (code.length !== 6) {
+        this.otpModal.error = 'Please enter all 6 digits';
+        return;
+      }
+
+      this.otpModal.verifying = true;
+      this.otpModal.error = '';
+
+      try {
+        const response = await fetch('/api/verify-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            otpId: this.otpModal.otpId,
+            code: code
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          // Handle lockout
+          if (data.locked) {
+            this.otpModal.locked = true;
+            this.otpModal.lockoutMinutes = data.lockoutMinutes;
+            this.otpModal.error = data.error;
+            this.speak(data.error);
+            return;
+          }
+
+          // Handle invalid OTP
+          this.otpModal.attemptsLeft = data.attemptsLeft || 0;
+          this.otpModal.error = `${data.error}. ${this.otpModal.attemptsLeft} attempt(s) left.`;
+          this.otpModal.code = ['', '', '', '', '', ''];
+          
+          // Focus first input
+          setTimeout(() => {
+            const firstInput = document.querySelector('.otp-input');
+            if (firstInput) firstInput.focus();
+          }, 100);
+
+          throw new Error(data.error);
+        }
+
+        // Success!
+        this.closeOTPModal();
+        
         // Success
-        this.showAlert('success', `Payment of ₱${this.formatMoney(this.payment.amount)} sent successfully to ${data.transaction.receiver}!`);
+        this.showAlert('success', `Payment of ₱${this.formatMoney(this.otpModal.amount)} sent successfully to ${this.otpModal.recipient.name}!`);
         
         // TTS success message
-        this.speak(`Payment successful. You sent ${this.payment.amount} pesos to ${data.transaction.receiver}. Your new balance is ${data.transaction.newBalance} pesos.`);
+        this.speak(`Payment successful. You sent ${this.otpModal.amount} pesos to ${this.otpModal.recipient.name}. Your new balance is ${data.transaction.newBalance} pesos.`);
 
         // Reset form
         this.payment.receiverEmail = '';
@@ -482,6 +642,16 @@ function dashboardApp() {
       };
     },
 
+    closeOTPModal() {
+      this.otpModal.show = false;
+      this.otpModal.otpId = null;
+      this.otpModal.code = ['', '', '', '', '', ''];
+      this.otpModal.error = '';
+      this.otpModal.verifying = false;
+      this.otpModal.locked = false;
+      this.otpModal.lockoutMinutes = 0;
+    },
+
     connectToRealTimeUpdates() {
       // Connect to Server-Sent Events
       this.eventSource = new EventSource('/api/events');
@@ -489,10 +659,28 @@ function dashboardApp() {
       this.eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          
           if (data.type === 'transaction') {
             // Reload transactions and balance when notified
             this.loadTransactions();
             this.checkSession();
+          } else if (data.type === 'otp_generated') {
+            // OTP generated notification (already handled in requestOTP)
+            console.log('OTP generated via SSE:', data);
+          } else if (data.type === 'otp_lockout') {
+            // Lockout notification
+            this.showAlert('error', data.message);
+            this.speak(data.message);
+          } else if (data.type === 'payment_success') {
+            // Payment success notification
+            this.checkSession();
+            this.loadTransactions();
+          } else if (data.type === 'payment_received') {
+            // Received payment notification
+            this.showAlert('success', `You received ₱${this.formatMoney(data.amount)} from ${data.sender}!`);
+            this.speak(`You received ${data.amount} pesos from ${data.sender}`);
+            this.checkSession();
+            this.loadTransactions();
           }
         } catch (error) {
           console.error('SSE message error:', error);

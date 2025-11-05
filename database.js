@@ -85,6 +85,54 @@ const getAllUsers = async () => {
   return dbAll('SELECT id, name, phone, email, balance FROM users');
 };
 
+// OTP queries
+const insertOTP = async (user_id, code, receiver_id, amount, expires_at) => {
+  return dbRun(
+    'INSERT INTO otp_codes (user_id, code, receiver_id, amount, expires_at) VALUES (?, ?, ?, ?, ?)',
+    [user_id, code, receiver_id, amount, expires_at]
+  );
+};
+
+const getOTPById = async (id) => {
+  return dbGet('SELECT * FROM otp_codes WHERE id = ?', [id]);
+};
+
+const getActiveOTPByUserId = async (user_id) => {
+  const now = new Date().toISOString();
+  return dbGet(
+    'SELECT * FROM otp_codes WHERE user_id = ? AND verified = 0 AND expires_at > ? ORDER BY created_at DESC LIMIT 1',
+    [user_id, now]
+  );
+};
+
+const verifyOTP = async (id) => {
+  return dbRun('UPDATE otp_codes SET verified = 1 WHERE id = ?', [id]);
+};
+
+const insertOTPAttempt = async (user_id, otp_id, attempted_code, success, ip_address) => {
+  return dbRun(
+    'INSERT INTO otp_attempts (user_id, otp_id, attempted_code, success, ip_address) VALUES (?, ?, ?, ?, ?)',
+    [user_id, otp_id, attempted_code, success, ip_address]
+  );
+};
+
+const getRecentFailedAttempts = async (user_id, minutes = 5) => {
+  const cutoffTime = new Date(Date.now() - minutes * 60 * 1000).toISOString();
+  return dbAll(
+    'SELECT * FROM otp_attempts WHERE user_id = ? AND success = 0 AND attempted_at > ? ORDER BY attempted_at DESC',
+    [user_id, cutoffTime]
+  );
+};
+
+const cleanupExpiredOTPs = async () => {
+  const now = new Date().toISOString();
+  return dbRun('DELETE FROM otp_codes WHERE expires_at < ? AND verified = 0', [now]);
+};
+
+const updateOTPTransactionId = async (otp_id, transaction_id) => {
+  return dbRun('UPDATE otp_codes SET transaction_id = ? WHERE id = ?', [transaction_id, otp_id]);
+};
+
 // Export database and query functions
 module.exports = {
   db,
@@ -96,5 +144,13 @@ module.exports = {
   updateUserBalance,
   insertTransaction,
   getTransactionsByUserId,
-  getAllUsers
+  getAllUsers,
+  insertOTP,
+  getOTPById,
+  getActiveOTPByUserId,
+  verifyOTP,
+  insertOTPAttempt,
+  getRecentFailedAttempts,
+  cleanupExpiredOTPs,
+  updateOTPTransactionId
 };

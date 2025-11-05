@@ -642,6 +642,160 @@
     </div>
   </div>
 
+  <!-- OTP Verification Modal -->
+  <div x-show="otpModal.show" 
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-200"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-50 overflow-y-auto"
+       style="display: none;">
+    
+    <!-- Background overlay -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity"></div>
+
+    <!-- Modal content -->
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div @click.away="!otpModal.verifying && closeOTPModal()" 
+           class="bg-white rounded-2xl shadow-2xl max-w-md w-full relative z-10 p-8"
+           x-transition:enter="transition ease-out duration-300"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-200"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95">
+
+        <!-- Close button -->
+        <button @click="closeOTPModal()" 
+                class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
+                :disabled="otpModal.verifying || otpModal.locked">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+
+        <!-- Modal Header -->
+        <div class="text-center mb-6">
+          <div class="bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+            <svg class="w-10 h-10 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </div>
+          <h3 class="text-2xl font-bold text-gray-800 mb-2">Enter OTP</h3>
+          <p class="text-gray-600 text-sm">
+            We've sent a 6-digit code to verify your payment
+          </p>
+        </div>
+
+        <!-- Payment Details -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6 border border-blue-100">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-gray-600 text-sm">Recipient:</span>
+            <span class="font-semibold text-gray-800" x-text="otpModal.recipient.name"></span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-gray-600 text-sm">Amount:</span>
+            <span class="font-bold text-blue-600 text-lg">₱<span x-text="formatMoney(otpModal.amount)"></span></span>
+          </div>
+        </div>
+
+        <!-- Lockout Message -->
+        <div x-show="otpModal.locked" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+          <div class="flex items-center">
+            <svg class="w-6 h-6 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+            <div>
+              <p class="font-semibold text-red-800 text-sm">Account Locked</p>
+              <p class="text-red-600 text-xs" x-text="`Try again in ${otpModal.lockoutMinutes} minute(s)`"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- OTP Input Fields -->
+        <div x-show="!otpModal.locked">
+          <div class="flex justify-center gap-2 mb-6">
+            <template x-for="i in 6" :key="i">
+              <input 
+                type="text" 
+                maxlength="1"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                :data-otp-index="i - 1"
+                class="otp-input w-12 h-14 text-center text-2xl font-bold border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+                :class="{'border-red-500': otpModal.error}"
+                x-model="otpModal.code[i - 1]"
+                @input="handleOTPInput(i - 1, $event)"
+                @keydown="handleOTPKeydown(i - 1, $event)"
+                @paste="i === 1 && handleOTPPaste($event)"
+                :disabled="otpModal.verifying || otpModal.locked"
+                :autofocus="i === 1">
+            </template>
+          </div>
+
+          <!-- Error Message -->
+          <div x-show="otpModal.error" class="text-center mb-4">
+            <p class="text-red-600 text-sm font-medium" x-text="otpModal.error"></p>
+          </div>
+
+          <!-- Attempts Left -->
+          <div x-show="!otpModal.error && otpModal.attemptsLeft < 3" class="text-center mb-4">
+            <p class="text-amber-600 text-sm">
+              <span x-text="otpModal.attemptsLeft"></span> attempt(s) remaining
+            </p>
+          </div>
+
+          <!-- Timer -->
+          <div class="text-center mb-6">
+            <p class="text-gray-500 text-xs">
+              <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Code expires in <span x-text="otpModal.expiresIn"></span> minutes
+            </p>
+          </div>
+
+          <!-- Verify Button -->
+          <button 
+            @click="verifyOTP()"
+            :disabled="otpModal.verifying || otpModal.code.join('').length !== 6"
+            class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+            <span x-show="!otpModal.verifying">Verify & Complete Payment</span>
+            <span x-show="otpModal.verifying" class="flex items-center">
+              <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Verifying...
+            </span>
+          </button>
+
+          <!-- Help Text -->
+          <div class="mt-4 text-center">
+            <p class="text-xs text-gray-500">
+              Didn't receive the code? 
+              <button class="text-blue-600 hover:text-blue-700 font-medium" @click="closeOTPModal()">
+                Cancel and try again
+              </button>
+            </p>
+          </div>
+        </div>
+
+        <!-- Locked State Button -->
+        <div x-show="otpModal.locked">
+          <button 
+            @click="closeOTPModal()"
+            class="w-full bg-gray-600 text-white py-3 rounded-lg font-semibold hover:bg-gray-700 transition-all shadow-lg">
+            Close
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <script src="/js/dashboard.js"></script>
 </body>
 </html>

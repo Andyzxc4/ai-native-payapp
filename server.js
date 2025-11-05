@@ -14,7 +14,15 @@ const {
   updateUserBalance,
   insertTransaction,
   getTransactionsByUserId,
-  getAllUsers
+  getAllUsers,
+  insertOTP,
+  getOTPById,
+  getActiveOTPByUserId,
+  verifyOTP,
+  insertOTPAttempt,
+  getRecentFailedAttempts,
+  cleanupExpiredOTPs,
+  updateOTPTransactionId
 } = require('./database');
 
 const app = express();
@@ -59,6 +67,59 @@ const isAuthenticated = (req, res, next) => {
     res.status(401).json({ error: 'Unauthorized. Please login.' });
   }
 };
+
+// SSE clients registry for OTP notifications
+const sseClients = new Map();
+
+// OTP Configuration
+const OTP_CONFIG = {
+  LENGTH: 6,
+  EXPIRY_MINUTES: 5,
+  MAX_ATTEMPTS: 3,
+  LOCKOUT_MINUTES: 10,
+  ATTEMPT_WINDOW_MINUTES: 5
+};
+
+// Helper: Generate random OTP
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Helper: Check if user is locked out
+async function isUserLockedOut(userId) {
+  const attempts = await getRecentFailedAttempts(userId, OTP_CONFIG.ATTEMPT_WINDOW_MINUTES);
+  
+  if (attempts.length >= OTP_CONFIG.MAX_ATTEMPTS) {
+    const lastAttempt = new Date(attempts[0].attempted_at);
+    const lockoutUntil = new Date(lastAttempt.getTime() + OTP_CONFIG.LOCKOUT_MINUTES * 60 * 1000);
+    const now = new Date();
+    
+    if (now < lockoutUntil) {
+      const minutesLeft = Math.ceil((lockoutUntil - now) / 60000);
+      return { locked: true, minutesLeft };
+    }
+  }
+  
+  return { locked: false };
+}
+
+// Helper: Send SSE notification
+function sendSSENotification(userId, event, data) {
+  const client = sseClients.get(userId);
+  if (client) {
+    client.write(`data: ${JSON.stringify({ type: event, ...data })}\n\n`);
+  }
+}
+
+// Cleanup expired OTPs every 5 minutes
+setInterval(async () => {
+  try {
+    await cleanupExpiredOTPs();
+    console.log('🧹 Cleaned up expired OTPs');
+  } catch (error) {
+    console.error('Error cleaning up OTPs:', error);
+  }
+}, 5 * 60 * 1000);
 
 // Routes
 
@@ -254,6 +315,283 @@ app.post('/api/send-payment', isAuthenticated, async (req, res) => {
   }
 });
 
+// Request OTP for payment
+app.post('/api/request-otp', isAuthenticated, async (req, res) => {
+  const { receiverEmail, amount } = req.body;
+  const senderId = req.session.userId;
+
+  if (!receiverEmail || !amount) {
+    return res.status(400).json({ error: 'Receiver email and amount are required' });
+  }
+
+  if (amount <= 0) {
+    return res.status(400).json({ error: 'Amount must be greater than zero' });
+  }
+
+  try {
+    // Check if user is locked out
+    const lockoutStatus = await isUserLockedOut(senderId);
+    if (lockoutStatus.locked) {
+      return res.status(429).json({ 
+        error: `Too many failed attempts. Please try again in ${lockoutStatus.minutesLeft} minute(s).`,
+        lockoutMinutes: lockoutStatus.minutesLeft
+      });
+    }
+
+    // Get sender
+    const sender = await getUserById(senderId);
+    if (!sender) {
+      return res.status(404).json({ error: 'Sender not found' });
+    }
+
+    // Get receiver
+    const receiver = await getUserByEmail(receiverEmail);
+    if (!receiver) {
+      return res.status(404).json({ error: 'Receiver not found' });
+    }
+
+    // Check if sending to self
+    if (sender.id === receiver.id) {
+      return res.status(400).json({ error: 'Cannot send payment to yourself' });
+    }
+
+    // Check sufficient balance
+    if (sender.balance < amount) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance',
+        currentBalance: sender.balance,
+        requiredAmount: amount
+      });
+    }
+
+    // Generate OTP
+    const otpCode = generateOTP();
+    const expiresAt = new Date(Date.now() + OTP_CONFIG.EXPIRY_MINUTES * 60 * 1000).toISOString();
+
+    // Save OTP to database
+    const otpResult = await insertOTP(sender.id, otpCode, receiver.id, amount, expiresAt);
+
+    // Log OTP generation
+    console.log(`🔐 OTP generated for user ${sender.id}: ${otpCode} (expires at ${expiresAt})`);
+
+    // Send OTP via SSE to the user
+    sendSSENotification(sender.id, 'otp_generated', {
+      otpId: otpResult.lastID,
+      code: otpCode,
+      expiresIn: OTP_CONFIG.EXPIRY_MINUTES,
+      recipient: {
+        name: receiver.name,
+        email: receiver.email
+      },
+      amount: amount
+    });
+
+    res.json({
+      message: 'OTP generated successfully',
+      otpId: otpResult.lastID,
+      code: otpCode, // In production, send via SMS/Email instead
+      expiresIn: OTP_CONFIG.EXPIRY_MINUTES,
+      recipient: {
+        name: receiver.name,
+        email: receiver.email
+      }
+    });
+  } catch (error) {
+    console.error('OTP request error:', error);
+    res.status(500).json({ error: 'Failed to generate OTP. Please try again.' });
+  }
+});
+
+// Verify OTP and complete payment
+app.post('/api/verify-otp', isAuthenticated, async (req, res) => {
+  const { otpId, code } = req.body;
+  const userId = req.session.userId;
+  const clientIP = req.ip || req.connection.remoteAddress;
+
+  if (!otpId || !code) {
+    return res.status(400).json({ error: 'OTP ID and code are required' });
+  }
+
+  try {
+    // Check if user is locked out
+    const lockoutStatus = await isUserLockedOut(userId);
+    if (lockoutStatus.locked) {
+      return res.status(429).json({ 
+        error: `Too many failed attempts. Please try again in ${lockoutStatus.minutesLeft} minute(s).`,
+        lockoutMinutes: lockoutStatus.minutesLeft,
+        locked: true
+      });
+    }
+
+    // Get OTP from database
+    const otp = await getOTPById(otpId);
+
+    if (!otp) {
+      return res.status(404).json({ error: 'OTP not found' });
+    }
+
+    // Check if OTP belongs to the user
+    if (otp.user_id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized OTP access' });
+    }
+
+    // Check if OTP is already verified
+    if (otp.verified) {
+      return res.status(400).json({ error: 'OTP already used' });
+    }
+
+    // Check if OTP is expired
+    const now = new Date();
+    const expiresAt = new Date(otp.expires_at);
+    if (now > expiresAt) {
+      await insertOTPAttempt(userId, otpId, code, false, clientIP);
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Verify OTP code
+    if (otp.code !== code) {
+      // Log failed attempt
+      await insertOTPAttempt(userId, otpId, code, false, clientIP);
+      
+      // Check how many failed attempts now
+      const recentAttempts = await getRecentFailedAttempts(userId, OTP_CONFIG.ATTEMPT_WINDOW_MINUTES);
+      const attemptsLeft = OTP_CONFIG.MAX_ATTEMPTS - recentAttempts.length;
+
+      if (attemptsLeft <= 0) {
+        sendSSENotification(userId, 'otp_lockout', {
+          message: `Account locked for ${OTP_CONFIG.LOCKOUT_MINUTES} minutes due to too many failed attempts`,
+          lockoutMinutes: OTP_CONFIG.LOCKOUT_MINUTES
+        });
+
+        return res.status(429).json({ 
+          error: `Too many failed attempts. Account locked for ${OTP_CONFIG.LOCKOUT_MINUTES} minutes.`,
+          lockoutMinutes: OTP_CONFIG.LOCKOUT_MINUTES,
+          locked: true
+        });
+      }
+
+      return res.status(400).json({ 
+        error: 'Invalid OTP code',
+        attemptsLeft: attemptsLeft
+      });
+    }
+
+    // OTP is valid - log successful attempt
+    await insertOTPAttempt(userId, otpId, code, true, clientIP);
+
+    // Mark OTP as verified
+    await verifyOTP(otpId);
+
+    // Get sender and receiver
+    const sender = await getUserById(otp.user_id);
+    const receiver = await getUserById(otp.receiver_id);
+
+    if (!sender || !receiver) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check balance again
+    if (sender.balance < otp.amount) {
+      return res.status(400).json({ 
+        error: 'Insufficient balance',
+        currentBalance: sender.balance,
+        requiredAmount: otp.amount
+      });
+    }
+
+    // Perform transaction
+    await new Promise((resolve, reject) => {
+      db.serialize(async () => {
+        try {
+          await dbRun('BEGIN TRANSACTION');
+          
+          // Update sender balance
+          const newSenderBalance = sender.balance - otp.amount;
+          await updateUserBalance(newSenderBalance, sender.id);
+
+          // Update receiver balance
+          const newReceiverBalance = receiver.balance + otp.amount;
+          await updateUserBalance(newReceiverBalance, receiver.id);
+
+          // Log transaction
+          const txResult = await insertTransaction(sender.id, receiver.id, otp.amount, 'completed');
+          
+          // Update OTP with transaction ID
+          await updateOTPTransactionId(otpId, txResult.lastID);
+
+          await dbRun('COMMIT');
+          resolve({ transactionId: txResult.lastID, newBalance: newSenderBalance });
+        } catch (error) {
+          await dbRun('ROLLBACK');
+          reject(error);
+        }
+      });
+    }).then(result => {
+      // Send success notification via SSE
+      sendSSENotification(userId, 'payment_success', {
+        transactionId: result.transactionId,
+        amount: otp.amount,
+        recipient: receiver.name,
+        newBalance: result.newBalance
+      });
+
+      // Notify receiver
+      sendSSENotification(receiver.id, 'payment_received', {
+        amount: otp.amount,
+        sender: sender.name,
+        newBalance: receiver.balance + otp.amount
+      });
+
+      res.json({
+        message: 'Payment successful',
+        transaction: {
+          id: result.transactionId,
+          sender: sender.name,
+          receiver: receiver.name,
+          amount: otp.amount,
+          newBalance: result.newBalance
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error('OTP verification error:', error);
+    res.status(500).json({ error: 'Payment verification failed. Please try again.' });
+  }
+});
+
+// Get OTP status
+app.get('/api/otp-status', isAuthenticated, async (req, res) => {
+  const userId = req.session.userId;
+
+  try {
+    // Check if user is locked out
+    const lockoutStatus = await isUserLockedOut(userId);
+    
+    // Get active OTP if exists
+    const activeOTP = await getActiveOTPByUserId(userId);
+    
+    // Get recent failed attempts
+    const recentAttempts = await getRecentFailedAttempts(userId, OTP_CONFIG.ATTEMPT_WINDOW_MINUTES);
+    const attemptsLeft = Math.max(0, OTP_CONFIG.MAX_ATTEMPTS - recentAttempts.length);
+
+    res.json({
+      locked: lockoutStatus.locked,
+      lockoutMinutes: lockoutStatus.minutesLeft || 0,
+      hasActiveOTP: !!activeOTP,
+      attemptsLeft: attemptsLeft,
+      config: {
+        maxAttempts: OTP_CONFIG.MAX_ATTEMPTS,
+        lockoutMinutes: OTP_CONFIG.LOCKOUT_MINUTES,
+        otpExpiryMinutes: OTP_CONFIG.EXPIRY_MINUTES
+      }
+    });
+  } catch (error) {
+    console.error('OTP status error:', error);
+    res.status(500).json({ error: 'Failed to get OTP status' });
+  }
+});
+
 // Get transaction history
 app.get('/api/transactions', isAuthenticated, async (req, res) => {
   const userId = req.session.userId;
@@ -400,9 +738,15 @@ app.get('/api/generate-qr', isAuthenticated, async (req, res) => {
 
 // Server-Sent Events for real-time updates
 app.get('/api/events', isAuthenticated, (req, res) => {
+  const userId = req.session.userId;
+  
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
+
+  // Register client for notifications
+  sseClients.set(userId, res);
+  console.log(`📡 SSE client connected: User ${userId}`);
 
   // Send initial connection message
   res.write('data: {"type":"connected","message":"Connected to real-time updates"}\n\n');
@@ -415,6 +759,8 @@ app.get('/api/events', isAuthenticated, (req, res) => {
   // Clean up on client disconnect
   req.on('close', () => {
     clearInterval(keepAlive);
+    sseClients.delete(userId);
+    console.log(`📡 SSE client disconnected: User ${userId}`);
     res.end();
   });
 });

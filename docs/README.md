@@ -31,6 +31,8 @@ New to the project? Start here:
 
 | Guide | Description | Topics Covered |
 |-------|-------------|----------------|
+| [OTP_FEATURE_GUIDE.md](OTP_FEATURE_GUIDE.md) | 🔐 **NEW!** OTP payment verification | Security, Rate limiting, Flow |
+| [OTP_QUICK_REFERENCE.md](OTP_QUICK_REFERENCE.md) | 🔐 **NEW!** OTP quick reference | Quick commands, Testing |
 | [QR_PAYMENT_FEATURE.md](QR_PAYMENT_FEATURE.md) | QR code payment system | Generate QR, Scan QR, Pay |
 | [QR_FEATURE_GUIDE.md](QR_FEATURE_GUIDE.md) | Detailed QR implementation | Technical details |
 | [QR_QUICK_START.md](QR_QUICK_START.md) | Quick QR setup | Fast QR guide |

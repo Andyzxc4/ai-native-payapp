@@ -53,6 +53,50 @@ db.serialize(() => {
     }
   });
 
+  // Create OTP Codes table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS otp_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      transaction_id INTEGER,
+      code TEXT NOT NULL,
+      receiver_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      expires_at DATETIME NOT NULL,
+      verified BOOLEAN DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (receiver_id) REFERENCES users(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating otp_codes table:', err);
+    } else {
+      console.log('✓ OTP Codes table created');
+    }
+  });
+
+  // Create OTP Attempts table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS otp_attempts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      otp_id INTEGER NOT NULL,
+      attempted_code TEXT NOT NULL,
+      success BOOLEAN DEFAULT 0,
+      ip_address TEXT,
+      attempted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (otp_id) REFERENCES otp_codes(id)
+    )
+  `, (err) => {
+    if (err) {
+      console.error('Error creating otp_attempts table:', err);
+    } else {
+      console.log('✓ OTP Attempts table created');
+    }
+  });
+
   // Hash password
   const hashPassword = (password) => {
     return bcrypt.hashSync(password, 10);
